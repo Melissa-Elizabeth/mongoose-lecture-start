@@ -46,6 +46,7 @@ myApp.factory('TaskFactory', ['$http', function($http) {
   }
 
   function uncompleteTask(taskId){
+    console.log('The taskId is:', taskId);
     $http({
       method: 'PUT',
       url: '/tasks/uncomplete/' + taskId

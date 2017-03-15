@@ -1,38 +1,33 @@
 
 // tasks.js
 var router = require('express').Router();
-var pg = require('pg');
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
 
-var config = {
-  database: 'phi-tasks',
-  host: 'localhost',
-  port: 5432,
-  max: 10,
-  idleTimeoutMillis: 30000
-};
+mongoose.connect('mongodb://localhost/todo');
 
-var pool = new pg.Pool(config);
+mongoose.model(
+  'Task',
+  new Schema({
+    "name": String,
+    "status": { type: Boolean, default: false }
+  },
+  {
+    collection: 'tasks'
+  }
+));
+
+var Task = mongoose.model('Task');
 
 // get all tasks
 router.get('/', function(req, res) {
   console.log('hit my get all tasks route');
-  pool.connect(function(err, client, done) {
+  Task.find({}, function(err, result){
     if(err){
-      console.log(err);
+      console.log('Error noooooooo', err);
       res.sendStatus(500);
     }else{
-      // SELECT * FROM task;
-      client.query('SELECT * FROM task ORDER BY status, id;', function(err, result) {
-        done(); // close the connection db
-
-        if(err){
-          console.log(err);
-          res.sendStatus(500); // the world exploded
-        }else{
-          console.log(result.rows);
-          res.status(200).send(result.rows);
-        }
-      });
+      res.send(result);
     }
   });
 });
@@ -44,28 +39,22 @@ router.post('/', function(req, res) {
 
   var taskObject = req.body;
 
+  var addedTask = new Task({
+    name: taskObject.taskName,
+  });
+
   // db query
-  // INSERT INTO task (name) VALUES ('test');
-  pool.connect(function(err, client, done) {
+  addedTask.save(function(err, result){
     if(err){
-      console.log(err);
+      console.log('Err Errrrrrrrr', err);
       res.sendStatus(500);
     }else{
-      client.query('INSERT INTO task (name) VALUES ($1);',
-        [taskObject.taskName], function(err, result) {
-          done();
-          if(err){
-            console.log(err);
-            res.sendStatus(500); // the world exploded
-          }else{
-            res.sendStatus(201);
-          }
-      });
+      res.sendStatus(201);
     }
   });
 });
-
-// create a new task in the db
+//
+// // create a new task in the db
 router.delete('/:id', function(req, res) {
   var taskToDeleteId = req.params.id;
   console.log('hit delete route');
@@ -73,55 +62,47 @@ router.delete('/:id', function(req, res) {
 
   // db query
   // DELETE FROM task WHERE id=7
-  pool.connect(function(err, client, done) {
-    if(err){
-      console.log(err);
-      res.sendStatus(500);
-    }else{
-      client.query('DELETE FROM task WHERE id=$1;',
-        [taskToDeleteId], function(err, result) {
-          done();
-          if(err){
-            console.log(err);
-            res.sendStatus(500); // the world exploded
-          }else{
-            res.sendStatus(200);
-          }
-      });
+  Task.findByIdAndRemove(
+    {_id: req.params.id},
+
+    function(err, result){
+      if(err){
+        console.log('errrrrrrrrr', err);
+        res.sendStatus(500);
+      }else{
+        res.sendStatus(200);
+      }
     }
-  });
+  );
 });
 
-
-
-// create a new task in the db
+//
+//
+//
+// // create a new task in the db
 router.put('/complete/:id', function(req, res) {
   var taskToCompleteId = req.params.id;
   console.log('hit complete route');
   console.log('here is the id to complete ->', taskToCompleteId);
 
   // db query
-  // UPDATE task SET status = TRUE WHERE ID = 4;
-  pool.connect(function(err, client, done) {
-    if(err){
-      console.log(err);
-      res.sendStatus(500);
-    }else{
-      client.query('UPDATE task SET status=TRUE WHERE ID=$1;',
-        [taskToCompleteId], function(err, result) {
-          done();
-          if(err){
-            console.log(err);
-            res.sendStatus(500); // the world exploded
-          }else{
-            res.sendStatus(200);
-          }
-      });
+  Task.findByIdAndUpdate(
+    {_id: req.params.id},
+    {
+      $set: {status: true}
+    },
+    function(err, result){
+      if(err){
+        console.log('errrrrrrrrr', err);
+        res.sendStatus(500);
+      }else{
+        res.sendStatus(200);
+      }
     }
-  });
+);
 });
-
-// create a new task in the db
+//
+// // create a new task in the db
 router.put('/uncomplete/:id', function(req, res) {
   var taskToUncompleteId = req.params.id;
   console.log('hit complete route');
@@ -129,23 +110,21 @@ router.put('/uncomplete/:id', function(req, res) {
 
   // db query
   // UPDATE task SET status = TRUE WHERE ID = 4;
-  pool.connect(function(err, client, done) {
-    if(err){
-      console.log(err);
-      res.sendStatus(500);
-    }else{
-      client.query('UPDATE task SET status=FALSE WHERE ID=$1;',
-        [taskToUncompleteId], function(err, result) {
-          done();
-          if(err){
-            console.log(err);
-            res.sendStatus(500); // the world exploded
-          }else{
-            res.sendStatus(200);
-          }
-      });
+  Task.findByIdAndUpdate(
+    {_id: req.params.id},
+    {
+      $set: {status: false}
+    },
+    function(err, result){
+      if(err){
+        console.log('errrrrrrrrr', err);
+        res.sendStatus(500);
+      }else{
+        res.sendStatus(200);
+      }
     }
-  });
+);
 });
+
 
 module.exports = router;
